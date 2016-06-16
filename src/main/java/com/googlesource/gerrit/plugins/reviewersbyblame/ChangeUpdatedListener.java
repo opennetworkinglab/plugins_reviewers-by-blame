@@ -23,8 +23,10 @@ import com.google.gerrit.reviewdb.server.ReviewDb;
 import com.google.gerrit.server.CurrentUser;
 import com.google.gerrit.server.IdentifiedUser;
 import com.google.gerrit.server.config.PluginConfigFactory;
+import com.google.gerrit.server.events.DraftPublishedEvent;
 import com.google.gerrit.server.events.Event;
 import com.google.gerrit.server.events.PatchSetCreatedEvent;
+import com.google.gerrit.server.events.PatchSetEvent;
 import com.google.gerrit.server.git.GitRepositoryManager;
 import com.google.gerrit.server.git.WorkQueue;
 import com.google.gerrit.server.project.NoSuchProjectException;
@@ -80,11 +82,17 @@ class ChangeUpdatedListener implements EventListener {
 
   @Override
   public void onEvent(Event event) {
-    if (!(event instanceof PatchSetCreatedEvent)) {
+    if (!(event instanceof PatchSetCreatedEvent ||
+      event instanceof DraftPublishedEvent)) {
       return;
     }
-    PatchSetCreatedEvent e = (PatchSetCreatedEvent) event;
+    PatchSetEvent e = (PatchSetEvent) event;
+
     Project.NameKey projectName = new Project.NameKey(e.change.project);
+
+    if (e.patchSet.isDraft) {
+      return;
+    }
 
     int maxReviewers;
     try {
